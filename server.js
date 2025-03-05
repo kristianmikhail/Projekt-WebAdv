@@ -4,7 +4,7 @@ const PORT = 3000;
 
 app.use('/', express.static('public'));
 
-app.get("/welcome", (res, req)=>{
+app.get("/welcome", (req, res)=>{
     res.send("Welcome to the REST API!");
 })
 
