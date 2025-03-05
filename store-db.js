@@ -27,7 +27,7 @@ async function selectRecords() {
         console.error('Error selecting records', err.stack);
     }
 }
-selectRecords()
+// selectRecords()
 
 function createTable() {
     const createTableQuery =
@@ -45,17 +45,43 @@ function createTable() {
 }
 // createTable();
 
-function insertRecord(insertValues) {
-    const insertQuery =
-        `
-            INSERT INTO stores (store_name, url, district)
-            VALUES ($1, $2, $3)
-            RETURNING *;
-            `;
-    client.query(insertQuery, insertValues)
-        .then(res => console.log('Inserted record:', res.rows[0]))
-        .catch(err => console.error('Error inserting record', err.stack));
+async function insertRecord(insertValues) {
+    const insertQuery = `
+        INSERT INTO stores (store_name, url, district)
+        VALUES ($1, $2, $3)
+        RETURNING *;
+    `;
+    try {
+        const res = await client.query(insertQuery, insertValues);
+        console.log('Inserted record:', res.rows[0]);
+    } catch (err) {
+        console.error('Error inserting record', err.stack);
+    }
 }
+
+async function dropTable() {
+    const dropTableQuery = 'DROP TABLE IF EXISTS stores;';
+    try {
+        await client.query(dropTableQuery);
+        console.log('Table "stores" dropped successfully.');
+    } catch (err) {
+        console.error('Error dropping table', err.stack);
+    }
+}
+
+// gamla insert funktion 
+
+// function insertRecord(insertValues) {
+//     const insertQuery =
+//         `
+//             INSERT INTO stores (store_name, url, district)
+//             VALUES ($1, $2, $3)
+//             RETURNING *;
+//             `;
+//     client.query(insertQuery, insertValues)
+//         .then(res => console.log('Inserted record:', res.rows[0]))
+//         .catch(err => console.error('Error inserting record', err.stack));
+// }
 
 // const insertValues = ['Nike', 'http/www.nike.se', 'söder'];
 // insertRecord(insertValues);
@@ -69,9 +95,9 @@ async function getIDByDistrict(district) {
         console.error('Error getting ID', err.stack);
     }
 }
-getIDByDistrict('söder').then((id) => {
-    console.log('ID:', id);
-})
+// getIDByDistrict('söder').then((id) => {
+//     console.log('ID:', id);
+// })
 
 function updateRecord(updateValues) {
     const updateQuery =
@@ -105,3 +131,14 @@ function disconnectDB() {
         .catch(err => console.error('Error disconnecting', err.stack));
 }
 // disconnectDB(); // should be called after all other functions
+
+module.exports = {
+    insertRecord,
+    selectRecords,
+    createTable,
+    getIDByDistrict,
+    updateRecord,
+    deleteRecord,
+    disconnectDB,
+    dropTable
+};
