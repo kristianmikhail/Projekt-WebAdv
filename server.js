@@ -1,82 +1,82 @@
-const { Client } = require('pg');
 const express = require('express');
+const storeModel = require('./model');
+
 const app = express();
+app.use(express.json()); 
+app.use(express.static('public')); // Serve frontend files
 
-const fs = require('fs');
-const path = require('path');
-const storeDB = require('./store-db'); // impoterat hela filen
+// 🔥 Ensure database is set up on server start
+(async () => {
+    await storeModel.dropTable();  // Drop table (optional)
+    await storeModel.createTable(); // Create table
+    await storeModel.insertStoresFromJSON(); // Insert stores from JSON
+})();
 
-// Läs in JSON-filen och parsar datan
-function insertStoresFromJSON() {
-    const filePath = path.join(__dirname, 'stores.json');
+// Root route
+app.get('/', (req, res) => {
+    res.sendFile(__dirname + '/public/index.html'); // Serve index.html
+});
 
-    fs.readFile(filePath, 'utf8', async (err, data) => {
-        if (err) {
-            console.error('Error reading stores.json:', err);
-            return;
-        }
-
-        try {
-            const stores = JSON.parse(data); // Parse JSON into an array
-
-            if (!Array.isArray(stores)) {
-                throw new Error('Parsed JSON is not an array.');
-            }
-
-            for (const store of stores) {
-                if (store.name) {
-                    const insertValues = [
-                        store.name,
-                        store.url || null, // Handle missing URLs
-                        store.district || null // Handle missing districts
-                    ];
-                    await storeDB.insertRecord(insertValues);
-                } else {
-                    console.warn('Skipping store due to missing name:', store);
-                }
-            }
-            console.log('All stores inserted successfully.');
-        } catch (parseError) {
-            console.error('Error parsing JSON:', parseError);
-        }
-    });
-}
-
-
-
-storeDB.dropTable();
-storeDB.createTable();
-// Kör funktionen för att lägga in butiker från stores.json
-insertStoresFromJSON();
-
+// Get all stores
 app.get('/all', async (req, res) => {
     try {
-        const dbres = await client.query('SELECT * FROM stores;');
-        console.log('All stores:', dbres.rows);
-        res.json(dbres.rows);
+        let query = 'SELECT * FROM stores';
+        const { sort } = req.query;
+
+        if (sort === 'name') {
+            query += ' ORDER BY store_name ASC';
+        } else if (sort === 'district') {
+            query += ' ORDER BY district ASC';
+        }
+
+        const stores = await storeModel.getAllStores(query);
+        res.json(stores);
     } catch (err) {
-        console.error('Error selecting records', err.stack);
+        res.status(500).json({ error: 'Database query failed' });
     }
 });
 
-app.use('/', express.static('public'));
 
-// Configure the client to connect to your containerized PostgreSQL
-const client = new Client({
-    host: 'localhost', port: 5432,
-    user: 'postgres', password: '12345'
-});
-// Connect to the database and start the server listening on port 3000
-const startServer = async () => {
+// Add a new store (POST request)
+app.post('/store', async (req, res) => {
+    const { name, url, district } = req.body;
+    if (!name) return res.status(400).json({ error: "Store name is required" });
+
     try {
-        await client.connect();
-        console.log('Connected to PostgreSQL database ');
+        const newStore = await storeModel.insertStore(name, url, district);
+        res.json(newStore);
     } catch (err) {
-        console.error('Connection error', err.stack);
+        res.status(500).json({ error: 'Failed to insert store' });
     }
-    app.listen(3000, () => {
-        console.log('Example app listening on port 3000!');
-    });
-}
-startServer();
+});
 
+//  Update an existing store
+app.put('/store/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, url, district } = req.body;
+    if (!name) return res.status(400).json({ error: "Store name is required" });
+
+    try {
+        const updatedStore = await storeModel.updateStore(id, name, url, district);
+        res.json(updatedStore);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to update store' });
+    }
+});
+
+//  Delete a store
+app.delete('/store/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        await storeModel.deleteStore(id);
+        res.json({ message: 'Store deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to delete store' });
+    }
+});
+
+
+// Start the server
+app.listen(3000, () => {
+    console.log('Server running on http://localhost:3000');
+});
