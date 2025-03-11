@@ -17,7 +17,7 @@ class StoreModel {
             .catch(err => console.error(' Database connection error:', err.stack));
     }
 
-    // 🔥 Drop the stores table
+    //  Drop the stores table
     async dropTable() {
         const query = `DROP TABLE IF EXISTS stores;`;
         try {
@@ -81,7 +81,7 @@ class StoreModel {
             const res = await this.client.query(query);
             return res.rows;
         } catch (err) {
-            console.error('❌ Error fetching stores:', err.stack);
+            console.error(' Error fetching stores:', err.stack);
             throw err;
         }
     }
@@ -105,7 +105,7 @@ class StoreModel {
             const res = await this.client.query(query, [name, url, district, id]);
             return res.rows[0];
         } catch (err) {
-            console.error('❌ Error updating store:', err.stack);
+            console.error('Error updating store:', err.stack);
             throw err;
         }
     }
